@@ -1,8 +1,13 @@
 const app = require("./app");
 const sequelize = require("./db/conn");
-const user = require("./models/user")
-const Scheduling = require("./models/Scheduling")
+const user = require("./models/employee");
+const Scheduling = require("./models/Scheduling");
+require("dotenv").config();
+const PORT = process.env.PORT;
 
-sequelize.sync().then(() => {
-  app.listen(3000);
-}).catch((err) =>console.log(err))
+sequelize
+  .sync()
+  .then(() => {
+    app.listen(PORT);
+  })
+  .catch((err) => console.log(err));

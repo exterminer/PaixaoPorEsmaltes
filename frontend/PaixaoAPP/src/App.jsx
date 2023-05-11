@@ -1,9 +1,13 @@
 import "./App.css";
 
+import { RouterMain } from "./routes/routes";
+
 function App() {
-  return <div>alo
-    {console.log("teste")}
-  </div>;
+  return (
+    <div className="App">
+      <RouterMain/>
+    </div>
+  );
 }
 
 export default App;

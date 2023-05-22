@@ -1,18 +1,19 @@
 const Employee = require("../models/employee");
 const Client = require("../models/client");
 const conn = require("../db/conn");
-const { where } = require("sequelize");
+const { where, Op } = require("sequelize");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-require("dotenv").config()
+require("dotenv").config();
 const { nextTick } = require("process");
-
-// const secret = crypto.randomBytes(64).toString("hex");
+const Scheduling = require("../models/Scheduling");
+const moment = require("moment");
+const { start } = require("repl");
 
 //Tenho que achar uma maneira de passsar isso para a pastas middlewares sem bugar a aplicaçao
- const  checkEmployeeToken = (req, res, next) =>{
+const checkEmployeeToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   //   const token = authHeader && authHeader.split(" ")[1];
   //   console.log(authHeader)
@@ -20,15 +21,14 @@ const { nextTick } = require("process");
     res.status(401).json({ message: "Acesso negado" });
   }
 
- 
-  const secret = process.env.SECRET
+  const secret = process.env.SECRET;
   try {
-     jwt.verify(authHeader, secret);
+    jwt.verify(authHeader, secret);
     next();
   } catch (error) {
     res.status(401).json({ message: "Token invalido" });
   }
-}
+};
 //
 const employeeRegister = async (req, res) => {
   const name = req.body.name;
@@ -82,6 +82,7 @@ const employeeRegister = async (req, res) => {
       .json({ message: "Aconteceu um erro no servidor,tente novamente" });
   }
 };
+
 const employeeLogin = async (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -103,7 +104,7 @@ const employeeLogin = async (req, res) => {
   if (!checkPassword) {
     return res.status(404).json({ message: "Senha incorreta" });
   }
-  const secret = process.env.SECRET
+  const secret = process.env.SECRET;
   const token = jwt.sign({ id: user.uuid }, secret);
   const userToSend = {
     idEmployee: user.idEmployee,
@@ -124,7 +125,7 @@ const employeeLogin = async (req, res) => {
 
 const getInfosUser = async (req, res) => {
   const id = req.params.id;
-  
+
   const user = await Employee.findOne({ where: { idEmployee: id } });
 
   if (!user) {
@@ -141,7 +142,6 @@ const getInfosUser = async (req, res) => {
 
   return res.status(200).json(userToSend);
 };
-
 
 const clientRegister = async (req, res) => {
   const authHeader = req.headers["authorization"];
@@ -171,11 +171,105 @@ const clientRegister = async (req, res) => {
   }
 };
 
+const schedule = async (req, res) => {
+  const client = req.body.name;
+  const employee = req.body.idEmployee;
+  const scheduleData = req.body.scheduleData;
+  const scheduleTime = req.body.scheduleTime;
+  const typeOfService = req.body.typeOfService;
+  const timeWasted = req.body.timeWasted;
+  const price = req.body.price;
+
+  const clientData = await Client.findOne({ where: { name: client } });
+
+  if (!clientData) {
+    return res.status(404).json({ message: "Cliente nao cadastradado" });
+  }
+
+  const employeeData = await Employee.findOne({
+    where: { idEmployee: employee },
+  });
+
+  if (!employeeData) {
+    return res.status(404).json({ message: "Profissional nao cadastradado" });
+  }
+
+  const startMoment = moment(
+    `${scheduleData} ${scheduleTime}`,
+    "DD/MM/YYYY HH:mm"
+  );
+
+  if (startMoment.hour() < 9 || startMoment.hour() >= 19) {
+    return res.status(400).json({ message: "Horário indisponível " });
+  }
+
+  const checkVacantSchedule = await Scheduling.findOne({
+    where: {
+      idEmployee: employee,
+      scheduleData: scheduleData,
+      scheduleTime: scheduleTime,
+    },
+  });
+
+  if (checkVacantSchedule) {
+    return res
+      .status(400)
+      .json({ message: "Já existe um agendamento neste horario" });
+  }
+
+  const duration = moment.duration(timeWasted, "HH:mm");
+  const durationInMinutes = duration.asMinutes();
+
+  const endMoment = startMoment.clone().add(durationInMinutes, "minutes");
+
+  console.log(endMoment);
+
+  const startTime = moment(scheduleTime, "HH:mm");
+  const startTimeFormat = startTime.format("HH:mm");
+
+  //ESPAÇO PARA REQUISIÇAO DE HORARIO EM CONFLITO AINDA NAO ESTA FUNCIONANDO ADEQUADAMENTE
+  const checkTimeConflict = await Scheduling.findAll({
+    where: {
+      idEmployee: employee,
+      scheduleData: scheduleData,
+    },
+  });
+
+  //
+
+  const phone = clientData.phone;
+  const name = clientData.name;
+  try {
+    await Scheduling.create({
+      idClient: clientData.idClient,
+      idEmployee: employeeData.idEmployee,
+      scheduleData: scheduleData,
+      scheduleTime: scheduleTime,
+      typeOfService: typeOfService,
+      timeWasted: timeWasted,
+      name: name,
+      phone: phone,
+      price: price,
+    });
+
+    return res.status(201).json({ message: "Horario marcado" });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Aconteceu um erro no servidor,tente novamente" });
+  }
+};
+
+const seeSchedule = async (req, res) => {
+  const schedules = await Scheduling.getALL();
+  return res.status(200).json(schedules);
+};
 module.exports = {
   employeeRegister,
   employeeLogin,
   getInfosUser,
   checkEmployeeToken,
   clientRegister,
-
+  schedule,
+  seeSchedule,
 };

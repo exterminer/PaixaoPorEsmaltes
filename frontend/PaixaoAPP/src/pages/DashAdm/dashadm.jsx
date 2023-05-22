@@ -1,7 +1,10 @@
+import { AdmDashcomp } from "../../components/AdmDash/admDash"
 
 export function DashAdm(){
+    
 return(
-<h1>dashAdm</h1>
+
+<AdmDashcomp />
 
 )    
 } 

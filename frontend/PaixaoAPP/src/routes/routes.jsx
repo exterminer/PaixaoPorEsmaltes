@@ -6,7 +6,7 @@ import { Register } from "../pages/Register/register";
 export function RouterMain() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Home/>} />
       <Route path="/register" element={<Register/>}/>
       <Route />
       <Route path="/admDashboard" element={<DashAdm />} />

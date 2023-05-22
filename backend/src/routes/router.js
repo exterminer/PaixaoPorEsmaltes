@@ -12,6 +12,8 @@ router.post("/employee/login", employee.employeeLogin);
 //Rotas de funcionarios com TOKEN 
 router.get("/employee/:id",employee.checkEmployeeToken,employee.getInfosUser )
 router.post("/employee/clientregister",employee.checkEmployeeToken, employee.clientRegister)
+router.post("/employee/schedule", employee.schedule)
+router.get("/employee/seeSchedule", employee.schedule)
 
 
 router.get("/adm", admUser.search);
